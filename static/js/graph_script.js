@@ -40,39 +40,3 @@
 //                .attr("cy", function(d) { return d.y; });
 //    });
 //});
-
-$("#company_search").click(function(){
-
-   var query=$("#company_input").val();
-   alert(query);
-   $.get("/searchcompany?company=" + encodeURIComponent(query),
-            function (data) {
-                var tbl = $("#company_results").find('tbody')
-                tbl.empty()
-
-
-                if (!data || data.length == 0) return;
-                data.forEach(function (company) {
-                    $("<tr><td>" + company.name + "</td><td>" + company.location + "</td><td>").appendTo(tbl)
-
-                });
-            }, "json");
-});
-
-$("#person_search").click(function(){
-
-   var query=$("#person_input").val();
-   alert(query);
-   $.get("/searchperson?person=" + encodeURIComponent(query),
-            function (data) {
-                var tbl = $("#person_results").find('tbody')
-                tbl.empty()
-                console.log(data)
-
-                if (!data || data.length == 0) return;
-                data.forEach(function (person) {
-                    $("<tr><td>" + person.name + "</td><td>" + person.position + "</td><td>").appendTo(tbl)
-
-                });
-            }, "json");
-});

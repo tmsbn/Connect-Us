@@ -10,7 +10,6 @@ driver = GraphDatabase.driver('bolt://localhost', auth=basic_auth("neo4j", "neo4
 
 logging.basicConfig(level=logging.DEBUG)
 
-
 print('hello world')
 
 
@@ -53,13 +52,12 @@ def close_session(error):
 # Search for company
 @app.route("/allcompanies")
 def get_all_companies():
-
     db_session = get_session()
     results = db_session.run("MATCH (company:COMPANY) " +
                              "RETURN company")
 
     return Response(dumps([serialize_company(record['company']) for record in results]),
-             mimetype="application/json")
+                    mimetype="application/json")
 
 
 # Search for company
@@ -74,7 +72,7 @@ def search_company():
         results = db_session.run("MATCH (company:COMPANY) " +
                                  "WHERE company.name =~ {name} " +
                                  "RETURN company"
-                 , {"name": "(?i)" + company_search + ".*"})
+                                 , {"name": "(?i)" + company_search + ".*"})
         return Response(dumps([serialize_company(record['company']) for record in results]),
                         mimetype="application/json")
 
@@ -82,8 +80,88 @@ def search_company():
 # Search for company
 @app.route("/hello")
 def hello():
-        return jsonify({'hello':'world'})
+    return jsonify({'hello': 'world'})
 
+
+# suggest friends of person
+@app.route("/connections")
+def search_friends():
+    try:
+        person_search = request.args["person"]
+    except KeyError:
+        return Response(dumps([]))
+    else:
+        db_session = get_session()
+
+        query = 'MATCH (person:PERSON {name:{name}})-[r:CONNECTED_TO]-(connection:PERSON) return connection'
+        results = db_session.run(query, {"name": person_search})
+        return Response(dumps([serialize_person(record['connection']) for record in results]),
+                        mimetype="application/json")
+
+
+# suggest connections
+@app.route("/suggestconnections")
+def suggest_connections():
+    try:
+        person_search = request.args["person"]
+    except KeyError:
+        return Response(dumps([]))
+    else:
+        db_session = get_session()
+        results = db_session.run("MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
+                                 "WHERE personA.name =~ {name} AND " +
+                                 "(personB)-[:WORKED_IN]-(company) AND " +
+                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
+                                 "return personB UNION " +
+                                 "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
+                                 "WHERE personA.name =~ {name} AND " +
+                                 "(personB)-[:WORKED_IN]-(company) AND " +
+                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
+                                 "return personB UNION " +
+                                 "MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
+                                 "WHERE personA.name =~ {name} AND " +
+                                 "(personB)-[:WORKS_IN]-(company) AND " +
+                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
+                                 "return personB UNION " +
+                                 "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
+                                 "WHERE personA.name =~ {name} AND " +
+                                 "(personB)-[:WORKS_IN]-(company) AND " +
+                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
+                                 "return personB LIMIT 5", {"name": "(?i)" + person_search + ".*"})
+        return Response(dumps([serialize_person(record['personB']) for record in results]),
+                        mimetype="application/json")
+
+# suggest companies
+@app.route("/suggestcompanies")
+def suggest_companies():
+    try:
+        person_search = request.args["person"]
+    except KeyError:
+        return Response(dumps([]))
+    else:
+        db_session = get_session()
+        results = db_session.run("MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
+                                 "WHERE personA.name =~ {name} AND " +
+                                 "(personB)-[:WORKED_IN]-(company) AND " +
+                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
+                                 "return personB UNION " +
+                                 "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
+                                 "WHERE personA.name =~ {name} AND " +
+                                 "(personB)-[:WORKED_IN]-(company) AND " +
+                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
+                                 "return personB UNION " +
+                                 "MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
+                                 "WHERE personA.name =~ {name} AND " +
+                                 "(personB)-[:WORKS_IN]-(company) AND " +
+                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
+                                 "return personB UNION " +
+                                 "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
+                                 "WHERE personA.name =~ {name} AND " +
+                                 "(personB)-[:WORKS_IN]-(company) AND " +
+                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
+                                 "return personB", {"name": "(?i)" + person_search + ".*"})
+        return Response(dumps([serialize_person(record['personB']) for record in results]),
+                        mimetype="application/json")
 
 # Search for company
 @app.route("/searchperson")
@@ -97,16 +175,15 @@ def search_person():
         results = db_session.run("MATCH (person:PERSON) " +
                                  "WHERE person.name =~ {name} " +
                                  "RETURN person"
-                 , {"name": "(?i)" + person_search + ".*"})
+                                 , {"name": "(?i)" + person_search + ".*"})
         return Response(dumps([serialize_person(record['person']) for record in results]),
                         mimetype="application/json")
 
 
-# @app.route("/graph")
-# def get_graph():
-#     db = get_session()
-#     results = db.run("MATCH (m:Movie)<-[:ACTED_IN]-(a:Person)")
-#     return jsonify(results)
+@app.route("/graph")
+def get_graph():
+    db = get_session()
+    pass
 
 
 if __name__ == '__main__':
