@@ -98,7 +98,7 @@ function searchPerson(query){
 
                         getConnections(person);
                         suggestConnections(person);
-                        suggestCompanies(person);
+                        suggestCompanies(person); 
                     })
 
                 });
