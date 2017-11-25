@@ -96,9 +96,20 @@ function searchPerson(query){
 
                         $(this).css("color", "red").siblings().css("color", "black");
 
-                        getConnections(person);
-                        suggestConnections(person);
-                        //suggestcompanies(person);
+                        if(query!=''){
+                             $("#connections_results").show();
+                            $("#company_suggestion_results").show();
+                            $("#connection_suggestion_results").show();
+
+                            getConnections(person);
+                            suggestConnections(person);
+                            suggestcompanies(person);
+                         }else{
+
+                            $("#connections_results").hide();
+                            $("#company_suggestion_results").hide();
+                            $("#connection_suggestion_results").hide();
+                         }
                     })
 
                 });
