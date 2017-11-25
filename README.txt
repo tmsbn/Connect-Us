@@ -1,7 +1,7 @@
 ------ Neo4j Application for Professional Connections ------
-Employment oriented social networking application using Ne4oj
+Employment oriented social networking application using Neo4j
 
-
+Course: Database Implementation Systems
 Authors:
 Neo4j Team
 
