@@ -20,6 +20,18 @@ def get_index():
 
 
 # Serialize person object
+def serialize_person_and_company(record, person_key='person', company_key='company'):
+    person = record[person_key]
+    company = record[company_key]
+
+    return {
+        'name': person['name'],
+        'position': 'Software Engineer',
+        'company': company['name']
+    }
+
+
+# Serialize person object
 def serialize_person(person):
     return {
         'name': person['name'],
@@ -83,9 +95,9 @@ def hello():
     return jsonify({'hello': 'world'})
 
 
-# suggest friends of person
+# get connections of person
 @app.route("/connections")
-def search_friends():
+def search_connections():
     try:
         person_search = request.args["person"]
     except KeyError:
@@ -93,9 +105,9 @@ def search_friends():
     else:
         db_session = get_session()
 
-        query = 'MATCH (person:PERSON {name:{name}})-[r:CONNECTED_TO]-(connection:PERSON) return connection'
+        query = 'MATCH (person:PERSON {name:{name}})-[r]-(connection:PERSON), (company:COMPANY) WHERE (connection)-[:WORKS_IN]-(company:COMPANY) return connection, company'
         results = db_session.run(query, {"name": person_search})
-        return Response(dumps([serialize_person(record['connection']) for record in results]),
+        return Response(dumps([serialize_person_and_company(record, person_key='connection') for record in results]),
                         mimetype="application/json")
 
 
@@ -110,25 +122,28 @@ def suggest_connections():
         db_session = get_session()
         results = db_session.run("MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
                                  "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKED_IN]-(company) AND " +
+                                 "(personB)-[:WORKED_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB UNION " +
+                                 "return personB, company UNION " +
+
                                  "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
                                  "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKED_IN]-(company) AND " +
+                                 "(personB)-[:WORKED_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB UNION " +
+                                 "return personB, company UNION " +
+
                                  "MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
                                  "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKS_IN]-(company) AND " +
+                                 "(personB)-[:WORKS_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB UNION " +
+                                 "return personB, company UNION " +
+
                                  "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
                                  "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKS_IN]-(company) AND " +
+                                 "(personB)-[:WORKS_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB LIMIT 5", {"name": "(?i)" + person_search + ".*"})
-        return Response(dumps([serialize_person(record['personB']) for record in results]),
+                                 "return personB, company LIMIT 5", {"name": "(?i)" + person_search + ".*"})
+        return Response(dumps([serialize_person_and_company(record, person_key='personB') for record in results]),
                         mimetype="application/json")
 
 # suggest companies
@@ -142,28 +157,33 @@ def suggest_companies():
         db_session = get_session()
         results = db_session.run("MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
                                  "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKED_IN]-(company) AND " +
+                                 "(personB)-[:WORKED_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
                                  "return personB UNION " +
+
                                  "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
                                  "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKED_IN]-(company) AND " +
+                                 "(personB)-[:WORKED_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
                                  "return personB UNION " +
+
                                  "MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
                                  "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKS_IN]-(company) AND " +
+                                 "(personB)-[:WORKS_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
                                  "return personB UNION " +
+
                                  "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
                                  "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKS_IN]-(company) AND " +
+                                 "(personB)-[:WORKS_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB", {"name": "(?i)" + person_search + ".*"})
-        return Response(dumps([serialize_person(record['personB']) for record in results]),
+                                 "return personB, company", {"name": "(?i)" + person_search + ".*"})
+        return Response(dumps([serialize_person_and_company(record['personB']) for record in results]),
+
                         mimetype="application/json")
 
-# Search for company
+
+# Search for person and return details
 @app.route("/searchperson")
 def search_person():
     try:
@@ -172,11 +192,12 @@ def search_person():
         return Response(dumps([]))
     else:
         db_session = get_session()
-        results = db_session.run("MATCH (person:PERSON) " +
+
+        results = db_session.run("MATCH (person:PERSON)-[:WORKS_IN]-(company:COMPANY)  " +
                                  "WHERE person.name =~ {name} " +
-                                 "RETURN person"
+                                 "RETURN person, company"
                                  , {"name": "(?i)" + person_search + ".*"})
-        return Response(dumps([serialize_person(record['person']) for record in results]),
+        return Response(dumps([serialize_person_and_company(record) for record in results]),
                         mimetype="application/json")
 
 

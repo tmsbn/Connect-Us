@@ -1,5 +1,5 @@
 // Suggest companies for person
-function suggestConnections(query){
+function suggestCompanies(query){
 
   console.log('suggest companies for:' + query)
   $.get("/suggestcompanies?person=" + encodeURIComponent(query),
@@ -10,8 +10,8 @@ function suggestConnections(query){
                 console.log('company suggestions')
                 console.log(data);
                 if (!data || data.length == 0) return;
-                data.forEach(function (connection) {
-                    $("<tr><td>" + connection.name + "</td><td>" + connection.position + "</td><td>").appendTo(tbl)
+                data.forEach(function (company) {
+                    $("<tr><td>" + company.name + "</td><td>" + company.location + "</td><td>").appendTo(tbl)
 
                 });
             }, "json");
@@ -32,7 +32,7 @@ function suggestConnections(query){
                 console.log(data);
                 if (!data || data.length == 0) return;
                 data.forEach(function (connection) {
-                    $("<tr><td>" + connection.name + "</td><td>" + connection.position + "</td><td>").appendTo(tbl)
+                    $("<tr><td>" + connection.name + "</td><td>" + connection.position + "</td><td>" + connection.company + "</td></tr>").appendTo(tbl)
 
                 });
             }, "json");
@@ -50,7 +50,7 @@ function getConnections(query){
                 //console.log(data);
                 if (!data || data.length == 0) return;
                 data.forEach(function (connection) {
-                    $("<tr><td>" + connection.name + "</td><td>" + connection.position + "</td><td>").appendTo(tbl)
+                    $("<tr><td>" + connection.name + "</td><td>" + connection.position + "</td><td>" + connection.company + "</td></tr>").appendTo(tbl)
 
                 });
             }, "json");
@@ -69,7 +69,7 @@ $("#company_search").click(function(){
 
                 if (!data || data.length == 0) return;
                 data.forEach(function (company) {
-                    $("<tr><td>" + company.name + "</td><td>" + company.location + "</td><td>").appendTo(tbl)
+                    $("<tr><td>" + company.name + "</td><td>" + company.location + "</td></tr>").appendTo(tbl)
 
                 });
             }, "json");
@@ -86,7 +86,9 @@ function searchPerson(query){
                 console.log(data)
                 if (!data || data.length == 0) return;
                 data.forEach(function (person) {
-                    $("<tr><td class='person clickable-row'>" + person.name + "</td><td>" + person.position + "</td><td>")
+
+                    console.log(person);
+                    $("<tr><td class='person clickable-row'>" + person.name + "</td><td>" + person.position + "</td><td>" + person.company + "</td></tr>")
                     .appendTo(tbl)
                     .click(function(){
                         var person = $(this).find("td.person").text();
