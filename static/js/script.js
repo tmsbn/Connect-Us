@@ -94,11 +94,11 @@ function searchPerson(query){
                         var person = $(this).find("td.person").text();
                         console.log(person);
 
-                        $(this).find("tr").addClass('active').siblings().removeClass('active');
+                        $(this).css("color", "red").siblings().css("color", "black");
 
                         getConnections(person);
                         suggestConnections(person);
-                        suggestcompanies(person);
+                        //suggestcompanies(person);
                     })
 
                 });
