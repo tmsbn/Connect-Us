@@ -10,8 +10,6 @@ driver = GraphDatabase.driver('bolt://localhost', auth=basic_auth("neo4j", "neo4
 
 logging.basicConfig(level=logging.DEBUG)
 
-print('hello world')
-
 
 # Get the index file
 @app.route("/")
@@ -19,14 +17,14 @@ def get_index():
     return render_template('index.html')
 
 
-# Serialize person object
+# Serialize person and company as together in object
 def serialize_person_and_company(record, person_key='person', company_key='company'):
     person = record[person_key]
     company = record[company_key]
 
     return {
         'name': person['name'],
-        'position': 'Software Engineer',
+        'position': person['position'],
         'company': company['name']
     }
 
@@ -35,7 +33,7 @@ def serialize_person_and_company(record, person_key='person', company_key='compa
 def serialize_person(person):
     return {
         'name': person['name'],
-        'position': 'Software Engineer',
+        'position': person['position'],
     }
 
 
@@ -43,9 +41,19 @@ def serialize_person(person):
 def serialize_company(company):
     return {
         'name': company['name'],
-        'location': 'seattle',
+        'location': company['location'],
     }
 
+
+# Serialize Company and openings in one object
+def serialize_company_and_openings(record, company_key = 'companyName', openings_key = 'jobs'):
+    company_name = record[company_key]
+    openings = record[openings_key]
+    return{
+        'name': company_name,
+        'openings': ",".join(openings),   
+    }
+   
 
 # Get graph db
 def get_session():
@@ -83,8 +91,8 @@ def search_company():
         db_session = get_session()
         results = db_session.run("MATCH (company:COMPANY) " +
                                  "WHERE company.name =~ {name} " +
-                                 "RETURN company"
-                                 , {"name": "(?i)" + company_search + ".*"})
+                                 "RETURN company", 
+                                 {"name": "(?i).*" + company_search + ".*"})
         return Response(dumps([serialize_company(record['company']) for record in results]),
                         mimetype="application/json")
 
@@ -105,8 +113,10 @@ def search_connections():
     else:
         db_session = get_session()
 
-        query = 'MATCH (person:PERSON {name:{name}})-[r]-(connection:PERSON), (company:COMPANY) WHERE (connection)-[:WORKS_IN]-(company:COMPANY) return connection, company'
-        results = db_session.run(query, {"name": person_search})
+        query = 'MATCH (person:PERSON)-[r:CONNECTED_TO]-(connection:PERSON), ' + \
+                '(company:COMPANY) WHERE person.name =~ {name} AND (connection)-[:WORKS_IN]-(company:COMPANY) ' + \
+                'return connection, company'
+        results = db_session.run(query, {"name": "(?i).*" + person_search + ".*"})
         return Response(dumps([serialize_person_and_company(record, person_key='connection') for record in results]),
                         mimetype="application/json")
 
@@ -142,9 +152,11 @@ def suggest_connections():
                                  "WHERE personA.name =~ {name} AND " +
                                  "(personB)-[:WORKS_IN]-(company:COMPANY) AND " +
                                  "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB, company LIMIT 5", {"name": "(?i)" + person_search + ".*"})
+                                 "return personB, company LIMIT 5", 
+                                 {"name": "(?i).*" + person_search + ".*"})
         return Response(dumps([serialize_person_and_company(record, person_key='personB') for record in results]),
                         mimetype="application/json")
+
 
 # suggest companies
 @app.route("/suggestcompanies")
@@ -155,31 +167,14 @@ def suggest_companies():
         return Response(dumps([]))
     else:
         db_session = get_session()
-        results = db_session.run("MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
-                                 "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKED_IN]-(company:COMPANY) AND " +
-                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB UNION " +
-
-                                 "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
-                                 "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKED_IN]-(company:COMPANY) AND " +
-                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB UNION " +
-
-                                 "MATCH (personA:PERSON)-[:WORKED_IN]-(company:COMPANY), (personB:PERSON) " +
-                                 "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKS_IN]-(company:COMPANY) AND " +
-                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB UNION " +
-
-                                 "MATCH (personA:PERSON)-[:WORKS_IN]-(company:COMPANY), (personB:PERSON) " +
-                                 "WHERE personA.name =~ {name} AND " +
-                                 "(personB)-[:WORKS_IN]-(company:COMPANY) AND " +
-                                 "personB <> personA AND NOT (personB)-[:CONNECTED_TO]-(personA) " +
-                                 "return personB, company", {"name": "(?i)" + person_search + ".*"})
-        return Response(dumps([serialize_person_and_company(record['personB']) for record in results]),
-
+        results = db_session.run("MATCH (person:PERSON), (company:COMPANY) WITH company, " + 
+                                 "filter(opening IN company.openings WHERE opening CONTAINS " + 
+                                 "split(person.position,' -')[0]) AS jobs WHERE person.name =~ {name} " + 
+                                 "AND NOT (person)-[:WORKS_IN]-(company) AND NOT size(jobs) = 0 RETURN " +
+                                 "company.name AS companyName, jobs", 
+                                 {"name": "(?i).*" + person_search + ".*"})
+        return Response(dumps([serialize_company_and_openings(record, company_key = 'companyName', openings_key = 'jobs')\
+                        for record in results]),
                         mimetype="application/json")
 
 
@@ -195,8 +190,8 @@ def search_person():
 
         results = db_session.run("MATCH (person:PERSON)-[:WORKS_IN]-(company:COMPANY)  " +
                                  "WHERE person.name =~ {name} " +
-                                 "RETURN person, company"
-                                 , {"name": "(?i)" + person_search + ".*"})
+                                 "RETURN person, company", 
+                                 {"name": "(?i).*" + person_search + ".*"})
         return Response(dumps([serialize_person_and_company(record) for record in results]),
                         mimetype="application/json")
 

@@ -11,7 +11,7 @@ function suggestCompanies(query){
                 console.log(data);
                 if (!data || data.length == 0) return;
                 data.forEach(function (company) {
-                    $("<tr><td>" + company.name + "</td><td>" + company.location + "</td><td>").appendTo(tbl)
+                    $("<tr><td>" + company.name + "</td><td>" + company.openings + "</td><td>").appendTo(tbl)
 
                 });
             }, "json");
@@ -98,7 +98,7 @@ function searchPerson(query){
 
                         getConnections(person);
                         suggestConnections(person);
-                        //suggestcompanies(person);
+                        suggestCompanies(person);
                     })
 
                 });
