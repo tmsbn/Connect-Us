@@ -1,5 +1,4 @@
------- Neo4j Application for Professional Connections ------
-Employment oriented social networking application using Neo4j
+------  Employment oriented social networking application using Neo4j ------
 
 Course: Database Implementation Systems
 Authors:
@@ -13,9 +12,7 @@ Neo4j Team
 
 ------ How to run ------
 
-1. Install the following python dependencies : Flask, Neo4j Bold Driver for python
-2. Open the Neo4j deskstop application and start a database server
-3. Navigate to this folder through terminal and type python app.py
-4. Navigate to http://localhost:8888 on your browser to see the app
-
-The next step is to install the dependencies for the app:
+1. Install the following python3 dependencies : Flask, Neo4j Bold Driver for python.
+2. Open the Neo4j desktop application and start the database server with employment data.
+3. Navigate to this folder in terminal and type python app.py.
+4. Navigate to http://localhost:8888 on your browser to run the app.
