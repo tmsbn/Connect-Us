@@ -1,3 +1,6 @@
+// author: Kritka Sahni, Jitesh Fulwariya, Palash Kumar Koutu, Thomas Binu
+// Description: JS functions to hit end-points to get data ad display it.
+
 // Suggest companies for person
 function suggestCompanies(query){
 
@@ -16,8 +19,6 @@ function suggestCompanies(query){
                 });
             }, "json");
     }
-
-
 
 // Suggest connections for person
 function suggestConnections(query){
@@ -42,16 +43,12 @@ function suggestConnections(query){
 // Get connections of person
 function getConnections(query){
 
-   console.log('HELLO THERE' + query);
-
   $.get("/connections?person=" + encodeURIComponent(query),
             function (data) {
                 var tbl = $("#connections_results").find('tbody')
                 tbl.empty()
 
-                console.log('GOT RESULTS');
-
-                console.log(data);
+                //console.log(data);
                 if (!data || data.length == 0) return;
                 data.forEach(function (connection) {
                     $("<tr><td>" + connection.name + "</td><td>" + connection.position + "</td><td>" + connection.company + "</td></tr>").appendTo(tbl)
@@ -83,12 +80,6 @@ $("#company_search").click(function(){
 // Search person by text
 function searchPerson(query){
 
-
-    $("#connections_results").find('tbody').hide();
-    $("#company_suggestion_results").find('tbody').hide();
-    $("#connection_suggestion_results").find('tbody').hide();
-
-
  $.get("/searchperson?person=" + encodeURIComponent(query),
             function (data) {
                 var tbl = $("#person_results").find('tbody')
@@ -102,38 +93,26 @@ function searchPerson(query){
                     .appendTo(tbl)
                     .click(function(){
                         var person = $(this).find("td.person").text();
-
-
-                        $(this).css("color", "red").siblings().css("color", "black");
-
-
                         console.log(person);
 
-
-                        $("#connections_results").find('tbody').show();
-                        $("#company_suggestion_results").find('tbody').show();
-                        $("#connection_suggestion_results").find('tbody').show();
+                        $(this).css("color", "red").siblings().css("color", "black");
 
                         getConnections(person);
                         suggestConnections(person);
                         suggestCompanies(person);
-
                     })
 
                 });
             }, "json");
-          }
+}
+
 // Show person details when clicking on row
 $("#person_search").click(function(){
-    
-   var searchQuery=$("#person_input").val();
-   searchPerson(searchQuery);
+
+   var query=$("#person_input").val();
+   searchPerson(query);
 
 });
 
-
 // Show all persons initially
 searchPerson('');
-//$("#connections_results").hide();
-//$("#company_suggestion_results").hide();
-//$("#connection_suggestion_results").hide();
